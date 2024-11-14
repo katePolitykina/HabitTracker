@@ -41,7 +41,7 @@ public class AuthenticationController {
     }
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody RegisterDTO registerDTO){
-        if(userRepository.existsByUsername(registerDTO.getUsername())){
+        if(userRepository.existsByEmail(registerDTO.getEmail())){
             return new ResponseEntity<>("Username is taken", HttpStatus.BAD_REQUEST);
         }
         UserEntity user = new UserEntity();
@@ -59,7 +59,7 @@ public class AuthenticationController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDTO> login(@RequestBody LoginDTO loginDTO){
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginDTO.getUsername(),
+                new UsernamePasswordAuthenticationToken(loginDTO.getEmail(),
                         loginDTO.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String token = jwtGenerator.generateToken(authentication);
