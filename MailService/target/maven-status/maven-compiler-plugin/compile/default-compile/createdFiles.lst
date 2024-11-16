@@ -1,0 +1,5 @@
+com/example/mailservice/MailServiceApplication.class
+com/example/mailservice/Config/RabbitConfig.class
+com/example/mailservice/controller.class
+com/example/mailservice/service/MailService.class
+com/example/mailservice/service/RabbitReceiver.class

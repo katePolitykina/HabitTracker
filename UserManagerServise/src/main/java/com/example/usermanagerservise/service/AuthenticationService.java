@@ -1,4 +1,4 @@
-package com.example.usermanagerservise.controller;
+package com.example.usermanagerservise.service;
 
 import com.example.usermanagerservise.DTO.AuthResponseDTO;
 import com.example.usermanagerservise.DTO.LoginDTO;
@@ -8,6 +8,9 @@ import com.example.usermanagerservise.entity.Role;
 import com.example.usermanagerservise.entity.UserEntity;
 import com.example.usermanagerservise.repository.RoleRepository;
 import com.example.usermanagerservise.repository.UserRepository;
+import com.example.usermanagerservise.service.MessageSender;
+import lombok.AllArgsConstructor;
+import org.example.RabbitDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,30 +19,26 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Collections;
 
-@RestController
-@RequestMapping("/HabitTracker/auth")
-public class AuthenticationController {
+@Service
+@AllArgsConstructor
+public class AuthenticationService {
     private AuthenticationManager authenticationManager;
     private UserRepository userRepository;
     private RoleRepository roleRepository;
     private PasswordEncoder passwordEncoder;
     private JWTGenerator jwtGenerator;
-    @Autowired
-    public AuthenticationController(AuthenticationManager authenticationManager, UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, JWTGenerator jwtGenerator) {
-        this.authenticationManager = authenticationManager;
-        this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtGenerator = jwtGenerator;
-    }
-    @PostMapping("/register")
+    private MessageSender messageSender;
+
     public ResponseEntity<String> register(@RequestBody RegisterDTO registerDTO){
         if(userRepository.existsByEmail(registerDTO.getEmail())){
             return new ResponseEntity<>("Username is taken", HttpStatus.BAD_REQUEST);
@@ -54,15 +53,28 @@ public class AuthenticationController {
         user.setEmail(registerDTO.getEmail());
         userRepository.save(user);
 
+        RabbitDTO rabbitDTO = new RabbitDTO();
+        rabbitDTO.setAccessToken(GenerateToken(registerDTO.getEmail(), registerDTO.getPassword()));
+        rabbitDTO.setUserEmail(registerDTO.getEmail());
+
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        String url = attributes.getRequest().getRequestURL().toString();
+
+        rabbitDTO.setUrl(url);
+        messageSender.send(rabbitDTO);
+
         return new ResponseEntity<>("User registered success", HttpStatus.OK );
     }
-    @PostMapping("/login")
+
     public ResponseEntity<AuthResponseDTO> login(@RequestBody LoginDTO loginDTO){
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginDTO.getEmail(),
-                        loginDTO.getPassword()));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String token = jwtGenerator.generateToken(authentication);
+        String token = GenerateToken(loginDTO.getEmail(), loginDTO.getPassword());
         return new ResponseEntity<>(new AuthResponseDTO(token), HttpStatus.OK);
+    }
+    private String GenerateToken(String email, String password){
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email,
+                        password));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        return jwtGenerator.generateToken(authentication);
     }
 }
