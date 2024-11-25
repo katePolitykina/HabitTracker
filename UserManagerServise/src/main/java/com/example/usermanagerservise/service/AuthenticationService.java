@@ -20,12 +20,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
 
 import java.util.Collections;
 
@@ -38,11 +38,27 @@ public class AuthenticationService {
     private PasswordEncoder passwordEncoder;
     private JWTGenerator jwtGenerator;
     private MessageSender messageSender;
+    public static boolean isValidEmail(String email) {
+        try {
+            InternetAddress emailAddr = new InternetAddress(email);
+            emailAddr.validate();
+            return true;
+        } catch (AddressException ex) {
+            return false;
+        }
+    }
+
 
     public ResponseEntity<String> register(@RequestBody RegisterDTO registerDTO){
         if(userRepository.existsByEmail(registerDTO.getEmail())){
             return new ResponseEntity<>("Username is taken", HttpStatus.BAD_REQUEST);
         }
+
+        if(isValidEmail(registerDTO.getEmail())){
+            return new ResponseEntity<>("Couldn't validate email", HttpStatus.BAD_REQUEST);
+        }
+
+
         UserEntity user = new UserEntity();
         user.setUsername(registerDTO.getUsername());
         user.setPasswordHash(passwordEncoder.encode((registerDTO.getPassword())));

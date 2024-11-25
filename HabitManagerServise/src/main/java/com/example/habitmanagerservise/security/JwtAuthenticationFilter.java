@@ -1,5 +1,7 @@
 package com.example.habitmanagerservise.security;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -11,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtUtil jwtUtil;
     public JwtAuthenticationFilter(JwtUtil jwtUtil) {
@@ -26,9 +29,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             if (jwtUtil.isTokenValid(token)) {
-                System.out.println("Extracted Token: " + token);
+                logger.info("Extracted Token: " + token);
                 String username = jwtUtil.extractUsername(token);
-                System.out.println("Valid Token. Username: " + username);
+                logger.info("Valid Token.");
 
                 // Создаем аутентификацию на основе данных из токена
                 CustomAuthenticationToken authentication = new CustomAuthenticationToken(username);
@@ -36,7 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
             else{
-                System.out.println("Invalid Token");
+                logger.info("Invalid Token");
             }
         }
 

@@ -9,4 +9,6 @@ public interface HabitRepository extends JpaRepository<HabitEntity, Long> {
     Boolean existsByUserEmailAndName(String user_email, String name);
 
     Optional<HabitEntity> findByIdAndUserEmail(Long habitId, String user);
+
+    HabitEntity findByNameAndUserEmail(String testHabit, String userEmail);
 }
